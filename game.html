@@ -33,6 +33,16 @@
       align-items: center;
       font-size: 36px;
       visibility: hidden;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    #gameOverScreen div {
+      max-width: 80%;
+      padding: 0 20px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: normal;
     }
     #gameOverScreen button {
       font-size: 24px;
@@ -45,11 +55,11 @@
 <body>
 
 <canvas id="game" width="400" height="400"></canvas>
-<div id="score">Score: 0</div>
+<div id="score">Kitni bar di: 0</div>
 
 <div id="gameOverScreen">
-  <div>Game Over!</div>
-  <button id="restartBtn">Restart</button>
+  <div>tujai nai dugi mai mere parents allow n krtai!</div>
+  <button id="restartBtn">chal bhai kisi or pr try krte h</button>
 </div>
 
 <script>
@@ -60,7 +70,7 @@
   const restartBtn = document.getElementById('restartBtn');
 
   const grid = 20;
-  let speed = 8;  // initial speed (frames per move)
+  let speed = 8;  
   let count = 0;
 
   let snake;
@@ -78,7 +88,7 @@
     score = 0;
     speed = 8;
     gameOver = false;
-    scoreDisplay.textContent = 'Score: 0';
+    scoreDisplay.textContent = 'Kitni bar di: 0';
     gameOverScreen.style.visibility = 'hidden';
   }
 
@@ -87,7 +97,7 @@
     do {
       x = Math.floor(Math.random() * (canvas.width / grid)) * grid;
       y = Math.floor(Math.random() * (canvas.height / grid)) * grid;
-      // Ensure food is not spawned on snake
+     
     } while (snake.some(segment => segment.x === x && segment.y === y));
     return { x, y };
   }
@@ -102,7 +112,7 @@
 
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-    // Check collisions with walls or self
+    
     if (
       head.x < 0 || head.x >= canvas.width ||
       head.y < 0 || head.y >= canvas.height ||
@@ -114,30 +124,29 @@
 
     snake.unshift(head);
 
-    // Eat food
+    
     if (head.x === food.x && head.y === food.y) {
       score++;
-      scoreDisplay.textContent = 'Score: ' + score;
+      scoreDisplay.textContent = 'Kitni bar di: ' + score;
       food = randomFoodPosition();
 
-      // every 5 point speed increased hogi 
+      
       if (score % 5 === 0 && speed > 2) speed--;
     } else {
       snake.pop();
     }
 
-    // Draw background
+    
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw food
+    
     ctx.fillStyle = 'red';
     ctx.fillRect(food.x, food.y, grid - 1, grid - 1);
 
-    // Draw snake body
+    
     ctx.fillStyle = 'lime';
     snake.forEach((segment, index) => {
-      // Different color for head
       if (index === 0) {
         ctx.fillStyle = '#0f0';
         ctx.shadowColor = '#0f0';
@@ -159,7 +168,6 @@
   window.addEventListener('keydown', e => {
     if (gameOver) return;
 
-   
     if (e.key === 'ArrowLeft' && dx === 0) {
       dx = -grid; dy = 0;
     } else if (e.key === 'ArrowUp' && dy === 0) {
