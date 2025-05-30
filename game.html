@@ -2,25 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snake Game Improved</title>
+  <title>Snake Game with Levels</title>
   <style>
     body {
       background: #222;
+      background-size: cover;
+      background-position: center;
       color: #eee;
       font-family: Arial, sans-serif;
       text-align: center;
       margin: 0;
       padding: 20px;
+      transition: background-image 1s ease-in-out;
     }
     canvas {
-      background: #000;
+      background: rgba(0,0,0,0.7);
       display: block;
       margin: 20px auto;
       border: 2px solid #555;
     }
-    #score {
+    #score, #level {
       font-size: 24px;
       margin-top: 10px;
+    }
+    #level {
+      color: #0af;
     }
     #gameOverScreen {
       position: fixed;
@@ -56,29 +62,43 @@
 
 <canvas id="game" width="400" height="400"></canvas>
 <div id="score">Kitni bar di: 0</div>
+<div id="level">Level: 1</div>
 
 <div id="gameOverScreen">
   <div>tujai nai dugi mai mere parents allow n krtai!</div>
   <button id="restartBtn">chal bhai kisi or pr try krte h</button>
 </div>
 
+<audio id="eatSound" src="https://cdn.pixabay.com/download/audio/2022/10/11/audio_499f31e53b.mp3" preload="auto"></audio>
+
 <script>
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreDisplay = document.getElementById('score');
+  const levelDisplay = document.getElementById('level');
   const gameOverScreen = document.getElementById('gameOverScreen');
   const restartBtn = document.getElementById('restartBtn');
+  const eatSound = document.getElementById('eatSound');
 
   const grid = 20;
-  let speed = 8;  
-  let count = 0;
+  let speed;
+  let count;
 
   let snake;
   let dx;
   let dy;
   let food;
   let score;
+  let level;
   let gameOver = false;
+
+  const romanticBackgrounds = [
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
+    'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6',
+    'https://images.unsplash.com/photo-1518806118471-f28b20a1d79d',
+    'https://images.unsplash.com/photo-1536001609411-51c2b7f1df52',
+    'https://images.unsplash.com/photo-1507537297725-24a1c029d3ca'
+  ];
 
   function init() {
     snake = [{ x: 160, y: 160 }];
@@ -86,10 +106,14 @@
     dy = 0;
     food = randomFoodPosition();
     score = 0;
+    level = 1;
     speed = 8;
+    count = 0;
     gameOver = false;
     scoreDisplay.textContent = 'Kitni bar di: 0';
+    levelDisplay.textContent = 'Level: 1';
     gameOverScreen.style.visibility = 'hidden';
+    changeBackground(); // initial background
   }
 
   function randomFoodPosition() {
@@ -97,22 +121,23 @@
     do {
       x = Math.floor(Math.random() * (canvas.width / grid)) * grid;
       y = Math.floor(Math.random() * (canvas.height / grid)) * grid;
-     
     } while (snake.some(segment => segment.x === x && segment.y === y));
     return { x, y };
   }
 
+  function changeBackground() {
+    const bg = romanticBackgrounds[Math.floor(Math.random() * romanticBackgrounds.length)];
+    document.body.style.backgroundImage = `url('${bg}')`;
+  }
+
   function gameLoop() {
     if (gameOver) return;
-
     requestAnimationFrame(gameLoop);
-
     if (++count < speed) return;
     count = 0;
 
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-    
     if (
       head.x < 0 || head.x >= canvas.width ||
       head.y < 0 || head.y >= canvas.height ||
@@ -124,28 +149,30 @@
 
     snake.unshift(head);
 
-    
     if (head.x === food.x && head.y === food.y) {
       score++;
       scoreDisplay.textContent = 'Kitni bar di: ' + score;
       food = randomFoodPosition();
+      eatSound.currentTime = 0;
+      eatSound.play();
+      changeBackground();
 
-      
-      if (score % 5 === 0 && speed > 2) speed--;
+      if (score % 5 === 0) {
+        level++;
+        levelDisplay.textContent = 'Level: ' + level;
+        if (speed > 2) speed--;
+      }
+
     } else {
       snake.pop();
     }
 
-    
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    
     ctx.fillStyle = 'red';
     ctx.fillRect(food.x, food.y, grid - 1, grid - 1);
 
-    
-    ctx.fillStyle = 'lime';
     snake.forEach((segment, index) => {
       if (index === 0) {
         ctx.fillStyle = '#0f0';
