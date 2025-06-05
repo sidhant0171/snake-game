@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snake & Tic Tac Toe</title>
+  <title>Snake, Tic Tac Toe & Egg Game</title>
   <style>
     body {
       background: #222;
@@ -11,7 +11,7 @@
       margin: 0;
       text-align: center;
     }
-    canvas, .tic-tac-toe {
+    canvas, .tic-tac-toe, #eggGame {
       margin: 20px auto;
       display: none;
     }
@@ -51,6 +51,44 @@
       font-size: 20px;
       margin-top: 10px;
     }
+
+    /* Egg Game Styles */
+    #eggGame h2, #eggGame p {
+      margin: 5px 0;
+    }
+    #eggGame .glasses {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    #eggGame .glass {
+      width: 80px;
+      height: 120px;
+      background: #9cc;
+      border-radius: 10px 10px 0 0;
+      border: 2px solid #666;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s;
+    }
+    #eggGame .glass:hover {
+      background: #ace;
+    }
+    #eggGame .glass.revealed {
+      background: #fc9;
+      cursor: default;
+    }
+    #eggGame .egg {
+      width: 40px;
+      height: 50px;
+      background: radial-gradient(circle at center, #fff 0%, #f4e1b0 60%, #cca95f 100%);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
   </style>
 </head>
 <body>
@@ -60,6 +98,7 @@
   <h2>Choose Game</h2>
   <button onclick="selectGame('snake')">Snake Game</button>
   <button onclick="selectGame('tictactoe')">Tic Tac Toe</button>
+  <button onclick="selectGame('egg')">Find the Egg</button>
 </div>
 
 <!-- Start Screen -->
@@ -92,12 +131,24 @@
   <div id="ticResult"></div>
 </div>
 
+<!-- Egg Game -->
+<div id="eggGame" class="screen" style="display:none; background: rgba(0,0,0,0.95); flex-direction: column; padding: 20px; max-width: 400px; margin: auto;">
+  <h2>Find the Egg!</h2>
+  <p>Click on a glass to find the egg.</p>
+  <div class="glasses">
+    <div class="glass" data-index="0" onclick="guessEgg(0)"></div>
+    <div class="glass" data-index="1" onclick="guessEgg(1)"></div>
+    <div class="glass" data-index="2" onclick="guessEgg(2)"></div>
+  </div>
+  <p id="eggResult"></p>
+  <button onclick="startEggGame()">Play Again</button>
+</div>
+
 <div id="playerInfo"></div>
 
 <div id="gameOverScreen" style="visibility:hidden;">
   <h2>Game Over</h2>
-<button onclick="location.reload()">Play Another</button>
-
+  <button onclick="location.reload()">Play Another</button>
 </div>
 
 <script>
@@ -119,21 +170,35 @@
     });
   });
 
- function startSelectedGame() {
-  const name = document.getElementById('playerName').value.trim();
-  if (!name) return alert("Please enter your name");
-  player.name = name;
-  player.gender = document.querySelector('input[name="gender"]:checked').value;
-  document.getElementById('startScreen').style.display = 'none';
-  document.getElementById('playerInfo').textContent = `Player: ${player.name} (${player.gender})`;
-
-  if (selectedGame === 'snake') startSnakeGame();
-  else if (selectedGame === 'tictactoe') {
-    // Show TicTacToe mode selection screen instead of starting directly
-    document.getElementById('ticTacToeModeSelect').style.display = 'flex';
+  function hideAllGames() {
+    canvas.style.display = 'none';
+    document.getElementById('score').style.display = 'none';
+    document.getElementById('level').style.display = 'none';
+    document.getElementById('ticTacToeModeSelect').style.display = 'none';
+    document.getElementById('ticTacToe').style.display = 'none';
+    document.getElementById('eggGame').style.display = 'none';
+    document.getElementById('gameOverScreen').style.visibility = 'hidden';
   }
-}
 
+  function startSelectedGame() {
+    const name = document.getElementById('playerName').value.trim();
+    if (!name) return alert("Please enter your name");
+    player.name = name;
+    player.gender = document.querySelector('input[name="gender"]:checked').value;
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('playerInfo').textContent = `Player: ${player.name} (${player.gender})`;
+
+    hideAllGames();
+
+    if (selectedGame === 'snake') startSnakeGame();
+    else if (selectedGame === 'tictactoe') {
+      document.getElementById('ticTacToeModeSelect').style.display = 'flex';
+    }
+    else if (selectedGame === 'egg') {
+      document.getElementById('eggGame').style.display = 'flex';
+      startEggGame();
+    }
+  }
 
   // ---------------- Snake Game ----------------
   let canvas = document.getElementById("gameCanvas");
@@ -216,103 +281,127 @@
   }
 
   // ---------------- Tic Tac Toe ----------------
-function startTicTacToe(mode = 'pvp') {
-  const board = Array(9).fill('');
-  let current = 'X';
-  let winner = null;
+  function startTicTacToe(mode = 'pvp') {
+    const board = Array(9).fill('');
+    let current = 'X';
+    let winner = null;
 
-  document.getElementById('ticTacToe').style.display = 'block';
-  const gridEl = document.getElementById('grid');
-  const result = document.getElementById('ticResult');
-  gridEl.innerHTML = '';
-  result.textContent = '';
+    document.getElementById('ticTacToe').style.display = 'block';
+    const gridEl = document.getElementById('grid');
+    const result = document.getElementById('ticResult');
+    gridEl.innerHTML = '';
+    result.textContent = '';
 
-  function checkWin(b) {
-    const lines = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
-    ];
-    for (let [a,b1,c] of lines) {
-      if (b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a];
+    function checkWin(b) {
+      const lines = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      for (let [a,b1,c] of lines) {
+        if (b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a];
+      }
+      return null;
     }
-    return null;
-  }
 
-  function computerMove() {
-    const empty = board.map((v, i) => v === '' ? i : null).filter(i => i !== null);
-    if (empty.length === 0) return;
-    const move = empty[Math.floor(Math.random() * empty.length)];
-    board[move] = 'O';
-    document.getElementById('cell-' + move).textContent = 'O';
-    winner = checkWin(board);
-    if (winner) {
-      endGame(winner);
-    } else if (board.every(c => c)) {
-      endGame('draw');
-    } else {
-      current = 'X';
-    }
-  }
-
-  function endGame(winner) {
-    if (winner === 'draw') {
-      result.textContent = "It's a draw!";
-    } else {
-      result.textContent = `${winner} wins!`;
-    }
-    document.getElementById('gameOverScreen').style.visibility = 'visible';
-  }
-
-  board.forEach((_, i) => {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.id = 'cell-' + i;
-    cell.addEventListener('click', () => {
-      if (board[i] || winner) return;
-
-      // PvC mode - prevent player 'O' move (computer plays O)
-      if (mode === 'cpu' && current === 'O') return;
-
-      board[i] = current;
-      cell.textContent = current;
+    function computerMove() {
+      const empty = board.map((v, i) => v === '' ? i : null).filter(i => i !== null);
+      if (empty.length === 0) return;
+      const move = empty[Math.floor(Math.random() * empty.length)];
+      board[move] = 'O';
+      document.getElementById('cell-' + move).textContent = 'O';
       winner = checkWin(board);
-
       if (winner) {
         endGame(winner);
-        return;
       } else if (board.every(c => c)) {
         endGame('draw');
-        return;
+      } else {
+        current = 'X';
       }
-
-      current = current === 'X' ? 'O' : 'X';
-
-      // If PvC and computer turn
-      if (mode === 'cpu' && current === 'O' && !winner) {
-        setTimeout(computerMove, 500);
-      }
-    });
-    gridEl.appendChild(cell);
-  });
-}
-
-  function checkWin(b) {
-    const lines = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
-    ];
-    for (let [a,b1,c] of lines) {
-      if (b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a];
     }
-    return null;
+
+    function endGame(winner) {
+      if (winner === 'draw') {
+        result.textContent = "It's a draw!";
+      } else {
+        result.textContent = `${winner} wins!`;
+      }
+      document.getElementById('gameOverScreen').style.visibility = 'visible';
+    }
+
+    board.forEach((_, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = 'cell-' + i;
+      cell.addEventListener('click', () => {
+        if (board[i] || winner) return;
+
+        // PvC mode - prevent player 'O' move (computer plays O)
+        if (mode === 'cpu' && current === 'O') return;
+
+        board[i] = current;
+        cell.textContent = current;
+        winner = checkWin(board);
+
+        if (winner) {
+          endGame(winner);
+          return;
+        } else if (board.every(c => c)) {
+          endGame('draw');
+          return;
+        }
+
+        current = current === 'X' ? 'O' : 'X';
+
+        // If PvC and computer turn
+        if (mode === 'cpu' && current === 'O' && !winner) {
+          setTimeout(computerMove, 500);
+        }
+      });
+      gridEl.appendChild(cell);
+    });
   }
+
   function startTicTacToeGame() {
-  document.getElementById('ticTacToeModeSelect').style.display = 'none';
-  const mode = document.querySelector('input[name="tttMode"]:checked').value;
-  startTicTacToe(mode);
-}
+    document.getElementById('ticTacToeModeSelect').style.display = 'none';
+    startTicTacToe(document.querySelector('input[name="tttMode"]:checked').value);
+  }
+
+  // ---------------- Egg Game ----------------
+  let eggPosition = null;
+  let eggGameActive = false;
+
+  function startEggGame() {
+    eggPosition = Math.floor(Math.random() * 3);
+    eggGameActive = true;
+    document.getElementById('eggResult').textContent = '';
+    const glasses = document.querySelectorAll('#eggGame .glass');
+    glasses.forEach(g => {
+      g.classList.remove('revealed');
+      g.innerHTML = '';
+      g.style.pointerEvents = 'auto';
+    });
+  }
+
+  function guessEgg(index) {
+    if (!eggGameActive) return;
+    eggGameActive = false;
+
+    const glasses = document.querySelectorAll('#eggGame .glass');
+
+    if (index === eggPosition) {
+      glasses[index].classList.add('revealed');
+      glasses[index].innerHTML = '<div class="egg"></div>';
+      document.getElementById('eggResult').textContent = '🎉 You found the egg! Congratulations!';
+    } else {
+      glasses[index].classList.add('revealed');
+      glasses[eggPosition].classList.add('revealed');
+      glasses[eggPosition].innerHTML = '<div class="egg"></div>';
+      document.getElementById('eggResult').textContent = '😞 Sorry, no egg here. Try again!';
+    }
+
+    glasses.forEach(g => g.style.pointerEvents = 'none');
+  }
 </script>
 
 </body>
